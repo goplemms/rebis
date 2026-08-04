@@ -1,0 +1,69 @@
+:root {
+  --bg: #14100e;
+  --line: #3a2e26;
+  --ember: #e0703a;
+  --gold: #d4a95a;
+  --parchment: #e8dcc4;
+  --dim: #7a6a5c;
+  --danger: #c0392b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 32px 24px;
+  background: var(--bg); color: var(--parchment);
+  font: 15px/1.5 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  display: flex; justify-content: center;
+  user-select: none;
+}
+.wrap { width: 100%; max-width: 360px; }
+h1 {
+  font-size: 18px; letter-spacing: .14em; text-transform: uppercase;
+  font-weight: 400; color: var(--gold); margin: 0 0 18px;
+}
+
+.tools { display: flex; gap: 6px; margin-bottom: 10px; }
+button {
+  font: inherit; font-size: 13px; color: var(--parchment); background: #241c18;
+  border: 1px solid var(--line); border-radius: 3px; padding: 6px 12px;
+  cursor: pointer; letter-spacing: .04em;
+}
+button:hover { border-color: var(--gold); color: var(--gold); }
+button.sel { border-color: var(--gold); color: var(--gold); background: #2c221b; }
+
+.board { display: block; cursor: pointer; }
+
+.bar {
+  position: relative; height: 46px; margin-top: 18px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 3px; background: #100c0a;
+  overflow: hidden;
+}
+.bar:hover, .bar:focus-visible { border-color: var(--gold); outline: none; }
+.flame {
+  position: absolute; inset: 0 auto 0 0; width: 0;
+  background: linear-gradient(90deg, #6b3a1f, var(--ember));
+}
+.vessel {
+  position: absolute; top: 0; bottom: 0; width: 2px;
+  background: var(--parchment); box-shadow: 0 0 6px rgba(232, 220, 196, .8);
+}
+.tick { position: absolute; top: 0; bottom: 0; width: 1px; }
+.tick.pure { background: var(--gold); }
+.tick.strain { background: var(--danger); }
+.cap {
+  position: absolute; inset: 0; display: flex; align-items: center;
+  justify-content: center; letter-spacing: .18em; text-transform: uppercase;
+  font-size: 11px; text-shadow: 0 0 6px #000, 0 0 3px #000;
+}
+
+.foot {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; margin-top: 10px; font-size: 12px; color: var(--dim);
+  min-height: 40px;
+}
+.foot .em { font-style: italic; }
+.foot .over { color: var(--gold); }
+.reset {
+  background: none; border: none; color: var(--dim); text-decoration: underline;
+  padding: 0; font-size: 12px; cursor: pointer; flex: none; white-space: nowrap;
+}
+.reset:hover { color: var(--gold); }

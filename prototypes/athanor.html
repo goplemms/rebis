@@ -47,6 +47,7 @@
   .cell .heat { position: absolute; inset: 0; border-radius: 3px; pointer-events: none;
                 background: radial-gradient(circle, var(--ember), transparent 72%); opacity: 0; }
   .cell .glyph { position: relative; }
+  .cell .stack { display: block; font-size: 17px; line-height: 1.05; }
   .cell .num { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 10px;
                color: var(--dim); font-variant-numeric: tabular-nums; }
 
@@ -131,10 +132,8 @@ function onCell(i) {
     if (i === b.pit) b.pit = -1;
     if (i === b.cucurbit) b.cucurbit = -1;
   } else if (tool === 'pit') {
-    if (i === b.cucurbit) b.cucurbit = -1;
-    b.pit = i;
-  } else {
-    if (i === b.pit) b.pit = -1;
+    b.pit = i;                          // each piece has its own slot, so the
+  } else {                              // vessel may sit ON the fire (distance 0)
     b.cucurbit = i;
   }
   paint();
@@ -165,21 +164,17 @@ function paint() {
   // ── board ──
   cells.forEach((c, i) => {
     const isPit = i === b.pit, isCuc = i === b.cucurbit;
-    c.glyph.textContent = isPit ? '🔥' : isCuc ? '⚗️' : '';
+    c.glyph.innerHTML = isPit && isCuc ? '<span class="stack">⚗️<br>🔥</span>'
+                      : isPit ? '🔥' : isCuc ? '⚗️' : '';
     c.el.style.borderColor = '';
-    if (isPit) {
-      c.heat.style.opacity = (S.heat / max * 0.85).toFixed(2);
-      c.num.textContent = S.lit ? S.heat.toFixed(0) : '';
-    } else if (isCuc) {
-      c.heat.style.opacity = (S.local / max * 0.85).toFixed(2);
-      c.num.textContent = S.lit || S.local > 1 ? S.local.toFixed(0) : '';
+    const heat = isPit ? S.heat : isCuc ? S.local : 0;
+    c.heat.style.opacity = (heat / max * 0.85).toFixed(2);
+    c.num.textContent = heat > 0.5 ? heat.toFixed(0) : '';
+    if (isCuc) {
       // strain shows as the glass reddening, rather than as another gauge
       const strain = S.strain / C.vessel.crackAt;
       if (strain > 0.02) c.el.style.borderColor =
         `rgba(192,57,43,${(0.3 + strain * 0.7).toFixed(2)})`;
-    } else {
-      c.heat.style.opacity = 0;
-      c.num.textContent = '';
     }
   });
 
