@@ -7,169 +7,125 @@
 <style>
   :root {
     --bg: #14100e;
-    --panel: #1e1815;
     --line: #3a2e26;
     --ember: #e0703a;
     --gold: #d4a95a;
     --parchment: #e8dcc4;
-    --vapor: #8fa3b0;
     --dim: #7a6a5c;
+    --danger: #c0392b;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 24px;
+    margin: 0; padding: 32px 24px;
     background: var(--bg);
     color: var(--parchment);
     font: 15px/1.5 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
     display: flex; justify-content: center;
+    user-select: none;
   }
-  .wrap { width: 100%; max-width: 760px; }
-  h1 { font-size: 20px; letter-spacing: .14em; text-transform: uppercase; font-weight: 400;
-       color: var(--gold); margin: 0 0 2px; }
-  .sub { color: var(--dim); font-size: 13px; font-style: italic; margin-bottom: 20px; }
+  .wrap { width: 100%; max-width: 360px; }
+  h1 { font-size: 18px; letter-spacing: .14em; text-transform: uppercase; font-weight: 400;
+       color: var(--gold); margin: 0 0 18px; }
 
-  .cols { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
-  .left { flex: 0 0 auto; }
-  .right { flex: 1 1 260px; min-width: 240px; }
+  /* ---- placement ---- */
+  .tools { display: flex; gap: 6px; margin-bottom: 10px; }
+  button {
+    font: inherit; font-size: 13px; color: var(--parchment); background: #241c18;
+    border: 1px solid var(--line); border-radius: 3px; padding: 6px 12px; cursor: pointer;
+    letter-spacing: .04em;
+  }
+  button:hover { border-color: var(--gold); color: var(--gold); }
+  button.sel { border-color: var(--gold); color: var(--gold); background: #2c221b; }
 
-  /* ---- grid ---- */
   .grid { display: grid; gap: 4px; }
   .cell {
     width: 62px; height: 62px; border: 1px solid var(--line); background: #191412;
     border-radius: 3px; cursor: pointer; position: relative;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 26px; transition: background .15s, border-color .15s;
+    display: flex; align-items: center; justify-content: center; font-size: 26px;
   }
   .cell:hover { border-color: var(--gold); }
-  .cell.glow { background: radial-gradient(circle, rgba(224,112,58,.30), transparent 70%); }
-  .cell .tag { position: absolute; bottom: 2px; left: 0; right: 0;
-               font-size: 9px; color: var(--dim); letter-spacing: .06em; }
-  .cell.pit.lit { animation: flicker 1.6s ease-in-out infinite; }
-  @keyframes flicker { 0%,100% { filter: brightness(1) } 50% { filter: brightness(1.35) } }
+  .cell .heat { position: absolute; inset: 0; border-radius: 3px; pointer-events: none;
+                background: radial-gradient(circle, var(--ember), transparent 72%); opacity: 0; }
+  .cell .glyph { position: relative; }
+  .cell .num { position: absolute; bottom: 1px; left: 0; right: 0; font-size: 10px;
+               color: var(--dim); font-variant-numeric: tabular-nums; }
 
-  /* ---- panels ---- */
-  .box { border: 1px solid var(--line); border-radius: 4px; padding: 12px 14px; margin-bottom: 12px;
-         background: var(--panel); }
-  .box h2 { font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
-            color: var(--dim); margin: 0 0 9px; font-weight: 400; }
-  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 2px 0; }
-  .row .k { color: var(--dim); font-size: 13px; }
-  .row .v { font-variant-numeric: tabular-nums; font-size: 16px; }
-  .v.gold { color: var(--gold); } .v.vapor { color: var(--vapor); } .v.ember { color: var(--ember); }
-
-  /* ---- gauge ---- */
-  .gauge { position: relative; height: 22px; border: 1px solid var(--line);
-           border-radius: 3px; background: #100c0a; overflow: hidden; margin: 6px 0 4px; }
-  .gauge .fill { position: absolute; inset: 0 auto 0 0; width: 0;
-                 background: linear-gradient(90deg, #6b3a1f, var(--ember)); transition: width .1s linear; }
-  .gauge .mark { position: absolute; top: 0; bottom: 0; width: 1px; }
-  .mark.safe { background: var(--gold); }
-  .mark.danger { background: #c0392b; }
-  .gauge .lbl { position: absolute; inset: 0; display: flex; align-items: center;
-                justify-content: center; font-size: 11px; letter-spacing: .1em;
-                text-shadow: 0 0 4px #000; font-variant-numeric: tabular-nums; }
-  .strain .fill { background: linear-gradient(90deg, #5c2a24, #c0392b); }
-  .legend { font-size: 11px; color: var(--dim); display: flex; gap: 12px; }
-  .legend i { font-style: normal; }
-  .legend .s { color: var(--gold); } .legend .d { color: #c0392b; }
-
-  /* ---- controls ---- */
-  button {
-    font: inherit; font-size: 13px; color: var(--parchment); background: #241c18;
-    border: 1px solid var(--line); border-radius: 3px; padding: 7px 13px; cursor: pointer;
-    letter-spacing: .04em;
+  /* ---- the one bar ---- */
+  .bar {
+    position: relative; height: 46px; margin-top: 18px; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 3px; background: #100c0a; overflow: hidden;
   }
-  button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
-  button:disabled { opacity: .35; cursor: default; }
-  button.sel { border-color: var(--gold); color: var(--gold); background: #2c221b; }
-  .tools { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
-  .hint { font-size: 12px; color: var(--dim); font-style: italic; min-height: 34px; margin-top: 8px; }
-  .over { color: var(--gold); font-style: normal; }
+  .bar:hover { border-color: var(--gold); }
+  .bar .flame { position: absolute; inset: 0 auto 0 0; width: 0;
+                background: linear-gradient(90deg, #6b3a1f, var(--ember)); }
+  .bar .vessel { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--parchment);
+                 box-shadow: 0 0 6px rgba(232,220,196,.8); }
+  .bar .tick { position: absolute; top: 0; bottom: 0; width: 1px; }
+  .bar .tick.pure { background: var(--gold); }
+  .bar .tick.strain { background: var(--danger); }
+  .bar .cap { position: absolute; inset: 0; display: flex; align-items: center;
+              justify-content: center; letter-spacing: .18em; text-transform: uppercase;
+              font-size: 11px; text-shadow: 0 0 6px #000, 0 0 3px #000; }
+
+  .foot { display: flex; justify-content: space-between; align-items: baseline;
+          margin-top: 10px; font-size: 12px; color: var(--dim); min-height: 40px; }
+  .foot em { font-style: italic; }
+  .foot .over { color: var(--gold); font-style: normal; }
+  .reset { background: none; border: none; color: var(--dim); text-decoration: underline;
+           padding: 0; font-size: 12px; cursor: pointer; flex: none; }
+  .reset:hover { color: var(--gold); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <h1>Athanor</h1>
-  <div class="sub">Rebis — step one. Turn a finite pile of wood into as much distillate as you can.</div>
 
-  <div class="cols">
-    <div class="left">
-      <div class="tools">
-        <button id="t-pit">Fire pit</button>
-        <button id="t-cuc">Cucurbit</button>
-        <button id="t-clr">Clear</button>
-      </div>
-      <div class="grid" id="grid"></div>
-      <div class="hint" id="hint"></div>
-    </div>
+  <div class="tools">
+    <button id="t-pit">Fire pit</button>
+    <button id="t-cuc">Cucurbit</button>
+    <button id="t-clr">Clear</button>
+  </div>
 
-    <div class="right">
-      <div class="box">
-        <h2>Flame</h2>
-        <div class="gauge"><div class="fill" id="g-heat"></div><div class="lbl" id="l-heat"></div></div>
-        <div class="row"><span class="k">Local heat at cucurbit</span></div>
-        <div class="gauge">
-          <div class="fill" id="g-local"></div>
-          <div class="mark safe" id="m-safe"></div>
-          <div class="mark danger" id="m-danger"></div>
-          <div class="lbl" id="l-local"></div>
-        </div>
-        <div class="legend"><i class="s">│ pure limit</i><i class="d">│ strain</i></div>
-        <div style="margin-top:10px" class="row"><span class="k">Vessel strain</span></div>
-        <div class="gauge strain"><div class="fill" id="g-strain"></div></div>
-      </div>
+  <div class="grid" id="grid"></div>
 
-      <div class="box">
-        <h2>Stores</h2>
-        <div class="row"><span class="k">Wood</span><span class="v ember" id="v-wood">—</span></div>
-        <div class="row"><span class="k">Prima materia</span><span class="v" id="v-mat">—</span></div>
-        <div class="row"><span class="k">Distillate</span><span class="v gold" id="v-dist">—</span></div>
-        <div class="row"><span class="k">Vapour lost</span><span class="v vapor" id="v-vap">—</span></div>
-      </div>
+  <div class="bar" id="bar">
+    <div class="flame" id="flame"></div>
+    <div class="tick pure" id="tick-pure"></div>
+    <div class="tick strain" id="tick-strain"></div>
+    <div class="vessel" id="vessel"></div>
+    <div class="cap" id="cap">Stoke the flame</div>
+  </div>
 
-      <div class="box">
-        <h2>Tending</h2>
-        <div class="tools" style="margin:0">
-          <button id="b-light">Light the fire</button>
-          <button id="b-stoke">Stoke &nbsp;(space)</button>
-          <button id="b-reset">New work</button>
-        </div>
-      </div>
-    </div>
+  <div class="foot">
+    <span id="hint"></span>
+    <button class="reset" id="reset">new work</button>
   </div>
 </div>
 
-<!-- Every balance number lives in tuning.js; the rules live in sim.js.
-     Nothing below this line decides anything about how the game plays. -->
 <script src="tuning.js"></script>
 <script src="sim.js"></script>
 <script>
 'use strict';
 const C = TUNING;
+const $ = id => document.getElementById(id);
 let S, tool = 'pit';
 
-const $ = id => document.getElementById(id);
 const gridEl = $('grid');
 gridEl.style.gridTemplateColumns = `repeat(${C.grid.size}, 62px)`;
-
+const cells = [];
 for (let i = 0; i < C.grid.size * C.grid.size; i++) {
   const c = document.createElement('div');
   c.className = 'cell';
+  c.innerHTML = '<div class="heat"></div><div class="glyph"></div><div class="num"></div>';
   c.addEventListener('click', () => onCell(i));
   gridEl.appendChild(c);
+  cells.push({ el: c, heat: c.children[0], glyph: c.children[1], num: c.children[2] });
 }
 
-function reset() {
-  S = Sim.createWork(C);
-  render();
-}
+function reset() { S = Sim.createWork(C); paint(); }
 
 function onCell(i) {
-  if (S.over) return;
-  if (S.lit) {                              // once lit, the pit is the stoke button
-    if (i === S.board.pit) Sim.stoke(S, C);
-    return;                                 // and nothing may be rearranged mid-burn
-  }
+  if (S.over || S.lit) return;          // nothing may be rearranged once it's burning
   const b = S.board;
   if (tool === 'clr') {
     if (i === b.pit) b.pit = -1;
@@ -181,32 +137,49 @@ function onCell(i) {
     if (i === b.pit) b.pit = -1;
     b.cucurbit = i;
   }
-  render();
+  paint();
 }
 
-$('t-pit').onclick = () => { tool = 'pit'; render(); };
-$('t-cuc').onclick = () => { tool = 'cuc'; render(); };
-$('t-clr').onclick = () => { tool = 'clr'; render(); };
-$('b-stoke').onclick = () => Sim.stoke(S, C);
-$('b-light').onclick = () => Sim.light(S, C);
-$('b-reset').onclick = reset;
+// The bar is the whole control: it lights the fire on the first press, then stokes.
+function poke() {
+  if (S.over) return;
+  if (!S.lit) Sim.light(S, C);
+  else Sim.stoke(S, C);
+}
+$('bar').addEventListener('mousedown', poke);
 addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); Sim.stoke(S, C); }
+  if (e.code === 'Space') { e.preventDefault(); poke(); }
 });
 
-const n = (x, d = 0) => x.toFixed(d);
+$('t-pit').onclick = () => { tool = 'pit'; paint(); };
+$('t-cuc').onclick = () => { tool = 'cuc'; paint(); };
+$('t-clr').onclick = () => { tool = 'clr'; paint(); };
+$('reset').onclick = reset;
 
-function render() {
-  const b = S.board;
-  gridEl.childNodes.forEach((c, i) => {
+function paint() {
+  const b = S.board, max = C.fire.maxHeat;
+  const placed = b.pit >= 0 && b.cucurbit >= 0;
+  const d = placed ? Sim.distance(b.cucurbit, b.pit, C) : 0;
+  const falloff = C.transfer.falloff[d];
+
+  // ── board ──
+  cells.forEach((c, i) => {
     const isPit = i === b.pit, isCuc = i === b.cucurbit;
-    c.textContent = isPit ? '🔥' : isCuc ? '⚗️' : '';
-    c.className = 'cell' + (isPit ? ' pit' : '') + (isPit && S.lit ? ' lit' : '');
-    if (b.pit >= 0 && S.lit && Sim.distance(i, b.pit, C) <= 2) c.classList.add('glow');
-    if (isPit || isCuc) {
-      const t = document.createElement('div');
-      t.className = 'tag'; t.textContent = isPit ? 'pit' : 'vessel';
-      c.appendChild(t);
+    c.glyph.textContent = isPit ? '🔥' : isCuc ? '⚗️' : '';
+    c.el.style.borderColor = '';
+    if (isPit) {
+      c.heat.style.opacity = (S.heat / max * 0.85).toFixed(2);
+      c.num.textContent = S.lit ? S.heat.toFixed(0) : '';
+    } else if (isCuc) {
+      c.heat.style.opacity = (S.local / max * 0.85).toFixed(2);
+      c.num.textContent = S.lit || S.local > 1 ? S.local.toFixed(0) : '';
+      // strain shows as the glass reddening, rather than as another gauge
+      const strain = S.strain / C.vessel.crackAt;
+      if (strain > 0.02) c.el.style.borderColor =
+        `rgba(192,57,43,${(0.3 + strain * 0.7).toFixed(2)})`;
+    } else {
+      c.heat.style.opacity = 0;
+      c.num.textContent = '';
     }
   });
 
@@ -214,50 +187,40 @@ function render() {
   $('t-cuc').className = tool === 'cuc' ? 'sel' : '';
   $('t-clr').className = tool === 'clr' ? 'sel' : '';
 
-  const max = C.fire.maxHeat;
-  $('g-heat').style.width = (S.heat / max * 100) + '%';
-  $('l-heat').textContent = 'flame ' + n(S.heat);
-  $('g-local').style.width = (S.local / max * 100) + '%';
-  $('l-local').textContent = 'vessel ' + n(S.local);
-  $('m-safe').style.left = (C.refining.pureLimit / max * 100) + '%';
-  $('m-danger').style.left = (C.vessel.strainAbove / max * 100) + '%';
-  $('g-strain').style.width = Math.min(100, S.strain / C.vessel.crackAt * 100) + '%';
-
-  $('v-wood').textContent = n(S.wood, 1);
-  $('v-mat').textContent = n(S.materia, 1);
-  $('v-dist').textContent = n(S.distillate, 1);
-  $('v-vap').textContent = n(S.vapor, 1);
-
-  $('b-light').disabled = !Sim.canLight(S, C);
-  $('b-stoke').disabled = !Sim.canStoke(S, C);
-
-  let h;
-  if (S.over) {
-    h = `<span class="over">${S.over}</span><br>Distillate: <b>${n(S.distillate, 1)}</b>` +
-        ` &nbsp;·&nbsp; vapour lost: ${n(S.vapor, 1)}`;
-  } else if (b.pit < 0 || b.cucurbit < 0) {
-    h = 'Place a fire pit and a cucurbit. Sitting the vessel <em>on</em> the pit tracks the flame ' +
-        'instantly — hot, fast, and it strains. Set it a cell away and the heat arrives slow and ' +
-        'smoothed, which is gentler but caps lower.';
-  } else if (!S.lit) {
-    const d = Sim.distance(b.cucurbit, b.pit, C);
-    h = `Distance ${d}: the vessel sees ${(C.transfer.falloff[d] * 100) | 0}% of the flame, ` +
-        `smoothed over ${C.transfer.lagSeconds[d]}s. Light it when you're ready.`;
-  } else {
-    h = 'Click the fire (or press space) to stoke. Past the gold line the materia turns to ' +
-        'vapour and escapes — but throughput keeps climbing, so the best yield sits just over it.';
+  // ── the bar ──
+  // Ticks live in vessel-heat units, so they get divided back through the
+  // falloff to land where the FLAME has to be. Move the vessel, ticks slide.
+  $('flame').style.width = (S.heat / max * 100) + '%';
+  $('vessel').style.left = (S.local / max * 100) + '%';
+  $('vessel').style.opacity = placed ? 1 : 0;
+  for (const [id, level] of [['tick-pure', C.refining.pureLimit],
+                             ['tick-strain', C.vessel.strainAbove]]) {
+    const flameNeeded = level / falloff;
+    const el = $(id);
+    el.style.opacity = placed && flameNeeded <= max ? 1 : 0;
+    el.style.left = (flameNeeded / max * 100) + '%';
   }
+
+  $('cap').textContent = !placed ? '' : S.over ? '' : S.lit ? 'Stoke' : 'Light the fire';
+  $('cap').style.color = S.lit ? 'var(--parchment)' : 'var(--gold)';
+
+  // ── one line of text ──
+  let h;
+  if (S.over) h = `<span class="over">${S.over}</span>`;
+  else if (!placed) h = '<em>Place a fire pit and a cucurbit.</em>';
+  else if (!S.lit) h = `<em>Distance ${d} — the vessel sees ${(falloff * 100) | 0}% of the flame, ` +
+                       `smoothed over ${C.transfer.lagSeconds[d]}s.</em>`;
+  else h = '<em>Click the bar or press space.</em>';
   $('hint').innerHTML = h;
 }
 
 reset();
-
 let last = performance.now();
 requestAnimationFrame(function loop(now) {
   const dt = Math.min(0.25, (now - last) / 1000);
   last = now;
   Sim.tick(S, C, dt);
-  render();
+  paint();
   requestAnimationFrame(loop);
 });
 </script>
