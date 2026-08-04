@@ -33,7 +33,7 @@
   .right { flex: 1 1 260px; min-width: 240px; }
 
   /* ---- grid ---- */
-  .grid { display: grid; grid-template-columns: repeat(5, 62px); gap: 4px; }
+  .grid { display: grid; gap: 4px; }
   .cell {
     width: 62px; height: 62px; border: 1px solid var(--line); background: #191412;
     border-radius: 3px; cursor: pointer; position: relative;
@@ -139,159 +139,70 @@
   </div>
 </div>
 
+<!-- Every balance number lives in tuning.js; the rules live in sim.js.
+     Nothing below this line decides anything about how the game plays. -->
+<script src="tuning.js"></script>
+<script src="sim.js"></script>
 <script>
-// ─────────────────────────────────────────────────────────────
-// Every number here is a first guess. Tuning these is the point.
-// ─────────────────────────────────────────────────────────────
-const C = {
-  grid: 5,
-  wood: 50,
-  materia: 100,
+'use strict';
+const C = TUNING;
+let S, tool = 'pit';
 
-  stokeHeat: 8,        // heat gained per stoke
-  stokeWood: 1,        // wood spent per stoke
-  upkeepWood: 0.30,    // wood/sec just to stay lit
-  decay: 0.06,         // heat lost per sec, as a fraction of current heat
-  maxHeat: 100,
-
-  // how heat reaches the cucurbit, by Chebyshev distance from the pit
-  falloff: [1.00, 0.85, 0.60, 0.30, 0.10],
-  lag:     [0.00, 3.00, 8.00, 14.0, 20.0],   // seconds of thermal smoothing
-
-  refine: 0.02,        // materia consumed per sec, per point of local heat
-  pureLimit: 50,       // below this, everything condenses
-  vaporWidth: 40,      // how fast vapour takes over past the limit (squared falloff)
-  strainAt: 85,        // local heat above which the vessel strains
-  strainRate: 0.02,
-  strainRelief: 0.06,
-};
-
-const S = {};
-function reset() {
-  S.board = Array.from({length: C.grid * C.grid}, () => null);
-  S.pit = -1; S.cuc = -1;
-  S.lit = false;
-  S.heat = 0; S.local = 0; S.strain = 0;
-  S.wood = C.wood; S.materia = C.materia;
-  S.distillate = 0; S.vapor = 0;
-  S.over = null;
-  S.tool = 'pit';
-  render();
-}
-
-const dist = (a, b) => {
-  const ax = a % C.grid, ay = (a / C.grid) | 0, bx = b % C.grid, by = (b / C.grid) | 0;
-  return Math.max(Math.abs(ax - bx), Math.abs(ay - by));
-};
-
-// ── simulation ───────────────────────────────────────────────
-function tick(dt) {
-  if (S.over) return;
-
-  if (S.lit) {
-    S.wood -= C.upkeepWood * dt;
-    S.heat -= S.heat * C.decay * dt;
-    if (S.wood <= 0) { S.wood = 0; S.lit = false; S.heat = 0; }
-    if (S.heat < 0.5) { S.heat = 0; S.lit = false; }
-  } else {
-    S.heat = 0;
-  }
-
-  // heat reaching the vessel: scaled by distance, and smoothed by it too
-  if (S.cuc >= 0 && S.pit >= 0) {
-    const d = Math.min(dist(S.cuc, S.pit), C.falloff.length - 1);
-    const target = S.heat * C.falloff[d];
-    const lag = C.lag[d];
-    S.local = lag <= 0 ? target : S.local + (target - S.local) * (1 - Math.exp(-dt / lag));
-  } else {
-    S.local = 0;
-  }
-
-  // refining: throughput rises with heat, purity falls past the limit
-  if (S.cuc >= 0 && S.materia > 0 && S.local > 1) {
-    const consumed = Math.min(S.materia, C.refine * S.local * dt);
-    const over = Math.max(0, S.local - C.pureLimit) / C.vaporWidth;
-    const vaporFrac = Math.min(1, over * over);
-    S.materia -= consumed;
-    S.distillate += consumed * (1 - vaporFrac);
-    S.vapor += consumed * vaporFrac;
-  }
-
-  // strain
-  if (S.local > C.strainAt) S.strain += (S.local - C.strainAt) * C.strainRate * dt * 100;
-  else S.strain = Math.max(0, S.strain - C.strainRelief * dt * 100);
-
-  if (S.strain >= 100) finish('The cucurbit cracked. Everything left in it is lost.');
-  else if (S.materia <= 0.001) finish('All the materia is spent.');
-  else if (!S.lit && S.wood <= 0) finish('The wood is gone and the fire is out.');
-}
-
-function finish(why) {
-  S.over = why;
-  S.lit = false;
-}
-
-// ── view ─────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const gridEl = $('grid');
+gridEl.style.gridTemplateColumns = `repeat(${C.grid.size}, 62px)`;
 
-for (let i = 0; i < C.grid * C.grid; i++) {
+for (let i = 0; i < C.grid.size * C.grid.size; i++) {
   const c = document.createElement('div');
-  c.className = 'cell'; c.dataset.i = i;
+  c.className = 'cell';
   c.addEventListener('click', () => onCell(i));
   gridEl.appendChild(c);
 }
 
+function reset() {
+  S = Sim.createWork(C);
+  render();
+}
+
 function onCell(i) {
   if (S.over) return;
-  // once lit, clicking the pit stokes it
-  if (S.lit && i === S.pit) { stoke(); return; }
-  if (S.lit) return;                       // no rearranging mid-burn
-
-  if (S.tool === 'clr') {
-    if (i === S.pit) S.pit = -1;
-    if (i === S.cuc) S.cuc = -1;
-  } else if (S.tool === 'pit') {
-    if (i === S.cuc) S.cuc = -1;
-    S.pit = i;
+  if (S.lit) {                              // once lit, the pit is the stoke button
+    if (i === S.board.pit) Sim.stoke(S, C);
+    return;                                 // and nothing may be rearranged mid-burn
+  }
+  const b = S.board;
+  if (tool === 'clr') {
+    if (i === b.pit) b.pit = -1;
+    if (i === b.cucurbit) b.cucurbit = -1;
+  } else if (tool === 'pit') {
+    if (i === b.cucurbit) b.cucurbit = -1;
+    b.pit = i;
   } else {
-    if (i === S.pit) S.pit = -1;
-    S.cuc = i;
+    if (i === b.pit) b.pit = -1;
+    b.cucurbit = i;
   }
   render();
 }
 
-function stoke() {
-  if (!S.lit || S.over || S.wood < C.stokeWood) return;
-  S.wood -= C.stokeWood;
-  S.heat = Math.min(C.maxHeat, S.heat + C.stokeHeat);
-}
-
-$('t-pit').onclick = () => { S.tool = 'pit'; render(); };
-$('t-cuc').onclick = () => { S.tool = 'cuc'; render(); };
-$('t-clr').onclick = () => { S.tool = 'clr'; render(); };
-$('b-stoke').onclick = stoke;
+$('t-pit').onclick = () => { tool = 'pit'; render(); };
+$('t-cuc').onclick = () => { tool = 'cuc'; render(); };
+$('t-clr').onclick = () => { tool = 'clr'; render(); };
+$('b-stoke').onclick = () => Sim.stoke(S, C);
+$('b-light').onclick = () => Sim.light(S, C);
 $('b-reset').onclick = reset;
-$('b-light').onclick = () => {
-  if (S.pit < 0 || S.cuc < 0 || S.lit || S.over || S.wood < 2) return;
-  S.lit = true; S.heat = 20; S.wood -= 2;
-  render();
-};
 addEventListener('keydown', e => {
-  if (e.code === 'Space') { e.preventDefault(); stoke(); }
+  if (e.code === 'Space') { e.preventDefault(); Sim.stoke(S, C); }
 });
 
 const n = (x, d = 0) => x.toFixed(d);
 
 function render() {
+  const b = S.board;
   gridEl.childNodes.forEach((c, i) => {
-    const isPit = i === S.pit, isCuc = i === S.cuc;
+    const isPit = i === b.pit, isCuc = i === b.cucurbit;
     c.textContent = isPit ? '🔥' : isCuc ? '⚗️' : '';
     c.className = 'cell' + (isPit ? ' pit' : '') + (isPit && S.lit ? ' lit' : '');
-    if (S.pit >= 0 && S.lit) {
-      const d = dist(i, S.pit);
-      if (d <= 2) c.classList.add('glow');
-    }
+    if (b.pit >= 0 && S.lit && Sim.distance(i, b.pit, C) <= 2) c.classList.add('glow');
     if (isPit || isCuc) {
       const t = document.createElement('div');
       t.className = 'tag'; t.textContent = isPit ? 'pit' : 'vessel';
@@ -299,38 +210,39 @@ function render() {
     }
   });
 
-  $('t-pit').className = S.tool === 'pit' ? 'sel' : '';
-  $('t-cuc').className = S.tool === 'cuc' ? 'sel' : '';
-  $('t-clr').className = S.tool === 'clr' ? 'sel' : '';
+  $('t-pit').className = tool === 'pit' ? 'sel' : '';
+  $('t-cuc').className = tool === 'cuc' ? 'sel' : '';
+  $('t-clr').className = tool === 'clr' ? 'sel' : '';
 
-  $('g-heat').style.width = (S.heat / C.maxHeat * 100) + '%';
+  const max = C.fire.maxHeat;
+  $('g-heat').style.width = (S.heat / max * 100) + '%';
   $('l-heat').textContent = 'flame ' + n(S.heat);
-  $('g-local').style.width = (S.local / C.maxHeat * 100) + '%';
+  $('g-local').style.width = (S.local / max * 100) + '%';
   $('l-local').textContent = 'vessel ' + n(S.local);
-  $('m-safe').style.left = (C.pureLimit / C.maxHeat * 100) + '%';
-  $('m-danger').style.left = (C.strainAt / C.maxHeat * 100) + '%';
-  $('g-strain').style.width = Math.min(100, S.strain) + '%';
+  $('m-safe').style.left = (C.refining.pureLimit / max * 100) + '%';
+  $('m-danger').style.left = (C.vessel.strainAbove / max * 100) + '%';
+  $('g-strain').style.width = Math.min(100, S.strain / C.vessel.crackAt * 100) + '%';
 
   $('v-wood').textContent = n(S.wood, 1);
   $('v-mat').textContent = n(S.materia, 1);
   $('v-dist').textContent = n(S.distillate, 1);
   $('v-vap').textContent = n(S.vapor, 1);
 
-  $('b-light').disabled = S.lit || S.over || S.pit < 0 || S.cuc < 0;
-  $('b-stoke').disabled = !S.lit || S.over || S.wood < C.stokeWood;
+  $('b-light').disabled = !Sim.canLight(S, C);
+  $('b-stoke').disabled = !Sim.canStoke(S, C);
 
   let h;
   if (S.over) {
     h = `<span class="over">${S.over}</span><br>Distillate: <b>${n(S.distillate, 1)}</b>` +
         ` &nbsp;·&nbsp; vapour lost: ${n(S.vapor, 1)}`;
-  } else if (S.pit < 0 || S.cuc < 0) {
+  } else if (b.pit < 0 || b.cucurbit < 0) {
     h = 'Place a fire pit and a cucurbit. Sitting the vessel <em>on</em> the pit tracks the flame ' +
         'instantly — hot, fast, and it strains. Set it a cell away and the heat arrives slow and ' +
         'smoothed, which is gentler but caps lower.';
   } else if (!S.lit) {
-    const d = Math.min(dist(S.cuc, S.pit), C.falloff.length - 1);
-    h = `Distance ${d}: the vessel sees ${(C.falloff[d] * 100) | 0}% of the flame, ` +
-        `smoothed over ${C.lag[d]}s. Light it when you're ready.`;
+    const d = Sim.distance(b.cucurbit, b.pit, C);
+    h = `Distance ${d}: the vessel sees ${(C.transfer.falloff[d] * 100) | 0}% of the flame, ` +
+        `smoothed over ${C.transfer.lagSeconds[d]}s. Light it when you're ready.`;
   } else {
     h = 'Click the fire (or press space) to stoke. Past the gold line the materia turns to ' +
         'vapour and escapes — but throughput keeps climbing, so the best yield sits just over it.';
@@ -338,16 +250,16 @@ function render() {
   $('hint').innerHTML = h;
 }
 
+reset();
+
 let last = performance.now();
-function loop(now) {
+requestAnimationFrame(function loop(now) {
   const dt = Math.min(0.25, (now - last) / 1000);
   last = now;
-  tick(dt);
+  Sim.tick(S, C, dt);
   render();
   requestAnimationFrame(loop);
-}
-reset();
-requestAnimationFrame(loop);
+});
 </script>
 </body>
 </html>
